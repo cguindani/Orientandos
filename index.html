@@ -627,28 +627,46 @@ async function togglePend(oid, pid, el) {
             'Concluir pendência?',
             '"' + p.texto + '"',
             'Marcar como concluída',
-            'flex:1;background:var(--green);color:white;border-color:var(--green);',
+            'flex:1;background:var(--smmol-green);color:white;border-color:var(--smmol-green);',
             () => {
               p.done = true;
-              el.classList.add('done');
-              el.textContent = '✓';
               save();
               renderLista();
               renderPend();
+              // re-render perfil if open
+              if(document.getElementById('s-perfil').classList.contains('active') && oid) {
+                openPerfil(oid);
+              }
             }
           );
         } else {
           p.done = false;
-          el.classList.remove('done');
-          el.textContent = '';
           save();
           renderLista();
+          renderPend();
         }
         return;
       }
     }
   }
 }
+
+// Wake Lock — evita bloqueio de tela durante gravação de voz
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+}
+function releaseWakeLock() {
+  try { if(wakeLock) { wakeLock.release(); wakeLock = null; } } catch(e) {}
+}
+// Re-acquire wake lock if page becomes visible again
+document.addEventListener('visibilitychange', async () => {
+  if(isRec && document.visibilityState === 'visible') await requestWakeLock();
+});
 
 function populateSel() {
   const sel = document.getElementById('ata-sel');
@@ -680,6 +698,7 @@ function startMic() {
   recognition.onend = () => { if(isRec) recognition.start(); };
   recognition.start();
   isRec=true;
+  await requestWakeLock();
   document.getElementById('mic-btn').classList.add('rec');
   document.getElementById('mic-lbl').textContent='Parar';
   document.getElementById('mic-st').innerHTML='<span class="pulse"></span> Gravando em pt-BR...';
@@ -689,6 +708,7 @@ function startMic() {
 function stopMic() {
   if(recognition){ recognition.onend=null; recognition.stop(); recognition=null; }
   isRec=false;
+  releaseWakeLock();
   const btn=document.getElementById('mic-btn');
   if(!btn) return;
   btn.classList.remove('rec');
