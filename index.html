@@ -676,7 +676,7 @@ function populateSel() {
 
 function toggleMic() { isRec ? stopMic() : startMic(); }
 
-function startMic() {
+async function startMic() {
   const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){ document.getElementById('mic-st').textContent='Não suportado neste navegador.'; return; }
   recognition = new SR();
