@@ -668,36 +668,44 @@ function excluirOrientando(id) {
 }
 
 async function togglePend(oid, pid, el) {
+  let foundAta = null, foundP = null;
   for(const ata of db.atas) {
     if(ata.oid!==oid) continue;
     for(const p of (ata.pendencias||[])) {
-      if(p.id===pid){
-        if(!p.done) {
-          abrirModal(
-            'Concluir pendência?',
-            '"' + p.texto + '"',
-            'Marcar como concluída',
-            'flex:1;background:var(--smmol-green);color:white;border-color:var(--smmol-green);',
-            () => {
-              p.done = true;
-              save();
-              renderLista();
-              renderPend();
-              // re-render perfil if open
-              if(document.getElementById('s-perfil').classList.contains('active') && oid) {
-                openPerfil(oid);
-              }
-            }
-          );
-        } else {
-          p.done = false;
-          save();
-          renderLista();
-          renderPend();
-        }
-        return;
-      }
+      if(p.id===pid){ foundAta=ata; foundP=p; break; }
     }
+    if(foundP) break;
+  }
+  if(!foundP) return;
+
+  if(!foundP.done) {
+    const textoCapturado = foundP.texto;
+    abrirModal(
+      'Concluir pendência?',
+      '"' + textoCapturado + '"',
+      'Marcar como concluída',
+      'flex:1;background:var(--smmol-green);color:white;border-color:var(--smmol-green);',
+      () => {
+        // Re-find to avoid stale reference
+        for(const ata of db.atas) {
+          if(ata.oid!==oid) continue;
+          for(const p of (ata.pendencias||[])) {
+            if(p.id===pid){ p.done=true; break; }
+          }
+        }
+        save();
+        renderLista();
+        renderPend();
+        if(document.getElementById('s-perfil').classList.contains('active')) {
+          openPerfil(oid);
+        }
+      }
+    );
+  } else {
+    foundP.done = false;
+    save();
+    renderLista();
+    renderPend();
   }
 }
 
